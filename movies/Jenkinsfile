@@ -94,9 +94,18 @@ pipeline {
         stage('Wait for deployment in DEV env') {
             //TODO: Watch deployment until pod is in 'Running' state
             steps {
-                sh '''
-                    oc wait --for=condition=Ready --all pod -n ${DEV_PROJECT}
-                '''
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject("${DEV_PROJECT}") {
+                            openshift.selector('dc', "${APP_NAME}").related('pods').untilEach(1) {
+                                return (it.object().status.phase == "Running")
+                            }
+                        }
+                    }
+                }
+                //sh '''
+                //    oc wait --for=condition=Ready --all pod -n ${DEV_PROJECT} --timeout=180
+                //'''
             }
         }
 
